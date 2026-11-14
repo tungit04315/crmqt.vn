@@ -41,5 +41,11 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"
+  },
+  "overrides": {
+    "jwks-rsa": "3.1.0"
+  },
+  "engines": {
+    "node": "24.x"
   }
 }
