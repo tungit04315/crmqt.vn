@@ -229,8 +229,8 @@ describe('yêu cầu gia hạn / điều chỉnh / thanh lý', () => {
   });
   it('danh sách yêu cầu theo loại có cờ quyền duyệt/hủy đúng với người xem', async () => {
     const id = await toStatus(salesA, 'active'); await rq(salesA, id, { type: 'renewal', newEndDate: '2027-12-31' }); await rq(salesA, id, { type: 'liquidation', liquidationDate: '2026-10-01' });
-    const forDir = await K.listChildren(dir, 'requests', { type: 'renewal' }); assert.equal(forDir.items.length, 1); assert.deepEqual(forDir.items[0].can, { decide: true, cancel: false });
-    const forSales = await K.listChildren(salesA, 'requests'); assert.equal(forSales.items.length, 2); assert.deepEqual(forSales.items[0].can, { decide: false, cancel: true });
+    const forDir = await K.listChildren(dir, 'requests', { type: 'renewal' }); assert.equal(forDir.items.length, 1); assert.deepEqual((forDir.items[0] as { can?: unknown }).can, { decide: true, cancel: false });
+    const forSales = await K.listChildren(salesA, 'requests'); assert.equal(forSales.items.length, 2); assert.deepEqual((forSales.items[0] as { can?: unknown }).can, { decide: false, cancel: true });
     assert.equal((await K.listChildren(salesB, 'requests')).items.length, 0);
   });
 });
