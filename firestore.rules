@@ -93,8 +93,33 @@ service cloud.firestore {
     match /priceLog/{id} { allow read, write: if false; }
     match /priceChangeRequests/{id} { allow read, write: if false; }
     match /taxRates/{id} { allow read, write: if false; match /{sub=**} { allow read, write: if false; } }
-    match /priceChangeRequests/{id} { allow read, write: if false; }
     match /catalogCodes/{id} { allow read, write: if false; }
+    // Báo giá & hồ sơ doanh nghiệp (Phase 03): chỉ máy chủ (Admin SDK qua REST API); kể cả subcollection history.
+    match /quotations/{id} { allow read, write: if false; match /{sub=**} { allow read, write: if false; } }
+    match /companyProfile/{orgId} { allow read, write: if false; }
+    // Chỉ cần nếu giữ lại /api/products của Phase 03 (danh mục cũ). Module 10 dùng catalogItems ở trên.
+    match /products/{id} { allow read, write: if false; }
+    match /productNames/{id} { allow read, write: if false; }
+    // Phân hệ Công việc: toàn bộ qua API (Admin SDK); trình duyệt không được đọc/ghi trực tiếp
+    match /tasks/{id} { allow read, write: if false; match /{sub=**} { allow read, write: if false; } }
+    match /taskConfig/{id} { allow read, write: if false; }
+    match /teams/{id} { allow read, write: if false; }
+
+    // Hợp đồng (Phase 04): toàn bộ qua API (Admin SDK); trình duyệt không được đọc/ghi trực tiếp, kể cả subcollection history.
+    match /contracts/{id} { allow read, write: if false; match /{sub=**} { allow read, write: if false; } }
+    match /contractNumbers/{id} { allow read, write: if false; }
+    match /signingTokens/{id} { allow read, write: if false; match /{sub=**} { allow read, write: if false; } }
+    match /contractSigners/{id} { allow read, write: if false; match /{sub=**} { allow read, write: if false; } }
+    match /contractSignatures/{id} { allow read, write: if false; match /{sub=**} { allow read, write: if false; } }
+    match /contractFiles/{id} { allow read, write: if false; match /{sub=**} { allow read, write: if false; } }
+    match /contractEvents/{id} { allow read, write: if false; match /{sub=**} { allow read, write: if false; } }
+    match /emailLogs/{id} { allow read, write: if false; match /{sub=**} { allow read, write: if false; } }
+    match /contractSettings/{id} { allow read, write: if false; }
+    match /contractVersions/{id} { allow read, write: if false; }
+    match /contractAppendices/{id} { allow read, write: if false; }
+    match /contractRecords/{id} { allow read, write: if false; }
+    match /contractRequests/{id} { allow read, write: if false; }
+    match /contractLinks/{id} { allow read, write: if false; }
 
     match /counters/{cid} {
       allow read, write: if active() && canWrite() && (cid == me().organizationId + '_customer' || cid == me().organizationId + '_lead' || cid == me().organizationId + '_group' || cid == me().organizationId + '_activity');

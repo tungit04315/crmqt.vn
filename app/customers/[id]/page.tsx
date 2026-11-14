@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import CustomerOpportunities from '@/components/opportunities/CustomerOpportunities';
 import CustomerActivities from '@/components/activities/CustomerActivities';
+import LinkedQuotations from '@/components/quotations/LinkedQuotations';
+import LinkedContracts from '@/components/contracts/LinkedContracts';
 import { Field } from '@/components/ui/Info';
 import GroupChips from '@/components/groups/GroupChips';
 import { useParams, useRouter } from 'next/navigation';
@@ -42,6 +44,8 @@ export default function CustomerDetail() {
       {tab === 2 && <ContactsTab customerId={id} org={profile.organizationId} />}
       {tab === 3 && <CustomerActivities customerId={id} org={profile.organizationId} customerLabel={{ code: c.code, name: c.name }} />}
       {tab === 4 && <CustomerOpportunities customerId={id} />}
-      {tab > 4 && <p className="text-sm text-slate-500">Tab “{TABS[tab]}” sẽ được triển khai ở bước sau{[4, 5, 6, 7, 8].includes(tab) ? ' (dữ liệu lấy từ phân hệ chuyên trách)' : ''}.</p>}
+      {tab === 5 && <LinkedQuotations customerId={id} />}
+      {tab === 6 && <LinkedContracts customerId={id} />}
+      {tab > 6 && <p className="text-sm text-slate-500">Tab “{TABS[tab]}” sẽ được triển khai ở bước sau{[7, 8].includes(tab) ? ' (dữ liệu lấy từ phân hệ chuyên trách)' : ''}.</p>}
     </div></div>);
 }

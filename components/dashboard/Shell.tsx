@@ -6,6 +6,9 @@ import * as Icons from 'lucide-react';
 import { menu } from '@/lib/dashboard-data';
 import { useAuth } from '@/contexts/AuthContext';
 import { CARE_ROLES } from '@/lib/care-core';
+import { TASK_MANAGER_ROLES } from '@/lib/task-core';
+import { WRITE_ROLES } from '@/lib/opportunity-core';
+import { CONTRACT_VIEW_ROLES, CONTRACT_WRITE_ROLES } from '@/lib/contract-core';
 
 export const Ic = ({ n, ...p }: { n: string } & Icons.LucideProps) => {
   const C = (Icons as unknown as Record<string, Icons.LucideIcon>)[n]; return <C {...p} />;
@@ -35,6 +38,16 @@ const tree: Item[] = menu.map(([label, icon, href]) => label === 'Khách hàng'
       { label: 'Yêu cầu đang xử lý', href: '/care/tickets/status/in-progress' },
       { label: 'Yêu cầu chờ phản hồi', href: '/care/tickets/status/waiting' },
       { label: 'Yêu cầu đã giải quyết', href: '/care/tickets/status/resolved' }] }
+  : label === 'Công việc'
+  ? { label, icon, href, children: [
+      { label: 'Tất cả công việc', href: '/tasks' },
+      { label: 'Công việc của tôi', href: '/tasks/mine' },
+      { label: 'Công việc được giao', href: '/tasks/assigned' },
+      { label: 'Tạo công việc', href: '/tasks/create' },
+      { label: 'Công việc quá hạn', href: '/tasks/overdue' },
+      { label: 'Công việc hoàn thành', href: '/tasks/done' },
+      { label: 'Công việc đã xóa', href: '/tasks/trash' },
+      { label: 'Cấu hình công việc', href: '/tasks/settings' }] }
   : label === 'Sản phẩm & Dịch vụ'
   ? { label, icon, href, children: [
       { label: 'Tất cả sản phẩm & dịch vụ', href: '/products' },
@@ -49,6 +62,30 @@ const tree: Item[] = menu.map(([label, icon, href]) => label === 'Khách hàng'
       { label: 'Đơn vị tính', href: '/products/units' },
       { label: 'Thuế suất', href: '/products/tax-rates' },
       { label: 'Yêu cầu đổi giá', href: '/products/price-requests' }] }
+  : label === 'Báo giá & Đơn hàng'
+  ? { label, icon, href, children: [
+      { label: 'Danh sách báo giá', href: '/quotations' },
+      { label: 'Tạo báo giá', href: '/quotations/new' }] }
+  : label === 'Hợp đồng'
+  ? { label, icon, href, children: [
+      { label: 'Tất cả hợp đồng', href: '/contracts' },
+      { label: 'Tạo hợp đồng', href: '/contracts/new' },
+      { label: 'Hợp đồng dự thảo', href: '/contracts/view/draft' },
+      { label: 'Hợp đồng chờ duyệt', href: '/contracts/view/pending_approval' },
+      { label: 'Hợp đồng chờ ký', href: '/contracts/view/pending_signature' },
+      { label: 'Hợp đồng đang hiệu lực', href: '/contracts/view/active' },
+      { label: 'Hợp đồng sắp hết hạn', href: '/contracts/view/expiring' },
+      { label: 'Hợp đồng đã kết thúc', href: '/contracts/view/ended' },
+      { label: 'Phiên bản hợp đồng', href: '/contracts/versions' },
+      { label: 'Phụ lục hợp đồng', href: '/contracts/appendices' },
+      { label: 'Biên bản nghiệm thu', href: '/contracts/acceptances' },
+      { label: 'Hồ sơ bàn giao', href: '/contracts/handovers' },
+      { label: 'Yêu cầu gia hạn', href: '/contracts/renewals' },
+      { label: 'Yêu cầu điều chỉnh', href: '/contracts/adjustments' },
+      { label: 'Quản lý thanh lý', href: '/contracts/liquidations' },
+      { label: 'Lịch sử gia hạn', href: '/contracts/renewal-history' }] }
+  : label === 'Cài đặt & Phân quyền'
+  ? { label, icon, href, children: [{ label: 'Thông tin doanh nghiệp', href: '/settings/company' }] }
   : { label, icon, href });
 
 // Khớp theo đường dẫn; mục con có đường dẫn dài hơn sẽ được ưu tiên
@@ -60,7 +97,16 @@ export function Sidebar({ collapsed, open, onClose }: { collapsed: boolean; open
   const { profile } = useAuth();
   const [expanded, setExpanded] = useState<string[]>([]);
   // Mục "Chăm sóc khách hàng" chỉ hiện với vai có quyền (máy chủ vẫn kiểm tra lại ở mọi API)
-  const items = tree.filter(i => i.label !== 'Chăm sóc khách hàng' || (!!profile && CARE_ROLES.includes(profile.role)));
+  const salesRole = !!profile && WRITE_ROLES.includes(profile.role);
+  const items = tree.filter(i => i.label !== 'Chăm sóc khách hàng' || (!!profile && CARE_ROLES.includes(profile.role)))
+    // Báo giá & thông tin doanh nghiệp: chỉ vai có phạm vi bán hàng (khớp máy chủ: super_admin, director, manager, sales)
+    .filter(i => i.label !== 'Báo giá & Đơn hàng' || salesRole)
+    // Hợp đồng: kế toán/vận hành chỉ xem; "Tạo hợp đồng" chỉ hiện với vai được tạo (máy chủ vẫn kiểm tra lại ở mọi API)
+    .filter(i => i.label !== 'Hợp đồng' || (!!profile && CONTRACT_VIEW_ROLES.includes(profile.role)))
+    .map(i => (i.label === 'Hợp đồng' ? { ...i, children: i.children?.filter(c => c.href !== '/contracts/new' || (!!profile && CONTRACT_WRITE_ROLES.includes(profile.role))) } : i))
+    .map(i => (i.label === 'Cài đặt & Phân quyền' && !salesRole ? { ...i, children: undefined } : i))
+    // Công việc: "đã xóa" dành cho quản lý trở lên, "cấu hình" chỉ Super Admin (máy chủ vẫn kiểm tra lại ở mọi API)
+    .map(i => (i.label === 'Công việc' ? { ...i, children: i.children?.filter(c => (c.href !== '/tasks/trash' || (!!profile && TASK_MANAGER_ROLES.includes(profile.role))) && (c.href !== '/tasks/settings' || profile?.role === 'super_admin')) } : i));
   const kids = (i: Item) => i.children?.map(c => c.href) ?? [];
   const childActive = (i: Item) => !!i.children?.some(c => hit(path, c.href, kids(i)));
 

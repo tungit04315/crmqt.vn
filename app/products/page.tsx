@@ -1,3 +1,4 @@
+export const instant = false;
 import ItemList from '@/components/catalog/ItemList';
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ categoryId?: string }> }) {

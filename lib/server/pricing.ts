@@ -1,4 +1,4 @@
-import { FieldPath, FieldValue, type DocumentData, type Transaction } from 'firebase-admin/firestore';
+import { FieldPath, FieldValue, type DocumentData, type DocumentReference, type DocumentSnapshot, type Transaction } from 'firebase-admin/firestore';
 import { adminDb } from './firebase-admin';
 import { HttpError } from './errors';
 import type { Ctx } from './auth';
@@ -12,6 +12,8 @@ import type { UpsertResult } from '@/types/price-list';
 
 const db = () => adminDb();
 const col = (n: string) => db().collection(n);
+/** Firestore thật báo lỗi nếu getAll() nhận 0 tham số → luôn dùng hàm này khi danh sách có thể rỗng. */
+const getAllSafe = (refs: DocumentReference[]): Promise<DocumentSnapshot[]> => (refs.length ? db().getAll(...refs) : Promise.resolve([]));
 export const needView = (c: Ctx) => { if (!pricingCan.view(actorOf(c))) throw forbid('Vai trò của bạn chưa được cấp quyền xem giá và chính sách giá.'); };
 export const needEdit = (c: Ctx) => { needView(c); if (!pricingCan.edit(actorOf(c))) throw forbid('Bạn không có quyền chỉnh sửa giá theo nhóm và chính sách giá.'); };
 const PAGE = 50, PAGE_MAX = 100;
@@ -36,7 +38,7 @@ export async function resolveMany(c: Ctx, itemIds: string[], groupIds: string[],
   const present = uniq.filter(i => items.has(i) && !items.get(i)!.deletedAt);
   const gpSnaps = await Promise.all(present.map(i => col('groupPrices').where('organizationId', '==', c.orgId).where('itemId', '==', i).limit(200).get()));
   const allGroups = [...new Set([...groupIds, ...gpSnaps.flatMap(s => s.docs.map(d => d.data().groupId as string))])];
-  const [gNames, prioDocs] = await Promise.all([namesOf(c.orgId, 'customerGroups', allGroups), db().getAll(...allGroups.map(g => col('groupPriorities').doc(prioId(c.orgId, g))))]);
+  const [gNames, prioDocs] = await Promise.all([namesOf(c.orgId, 'customerGroups', allGroups), getAllSafe(allGroups.map(g => col('groupPriorities').doc(prioId(c.orgId, g))))]);
   const priorities: Record<string, number> = {}; prioDocs.forEach((s, k) => { if (s.exists) priorities[allGroups[k]] = s.data()!.priority; });
   const mine = new Set(groupIds);
   const lists = (await col('priceLists').where('organizationId', '==', c.orgId).limit(500).get()).docs.filter(s => { const d = s.data(); return !d.deletedAt && stateOf(d as never, today) === 'current' && ((d.customerGroupIds ?? []).length === 0 || (d.customerGroupIds as string[]).some(g => mine.has(g))); });
@@ -144,7 +146,7 @@ export async function listGroupPriceHistory(c: Ctx, id: string): Promise<{ items
 export async function listGroupPriorities(c: Ctx): Promise<{ items: GroupPriorityDto[]; can: { editPriority: boolean } }> {
   needView(c);
   const gs = (await col('customerGroups').where('organizationId', '==', c.orgId).limit(500).get()).docs;
-  const [prios, counts] = await Promise.all([db().getAll(...gs.map(g => col('groupPriorities').doc(prioId(c.orgId, g.id)))),
+  const [prios, counts] = await Promise.all([getAllSafe(gs.map(g => col('groupPriorities').doc(prioId(c.orgId, g.id)))),
     Promise.all(gs.map(g => col('groupPrices').where('organizationId', '==', c.orgId).where('groupId', '==', g.id).where('status', '==', 'active').count().get().then(s => s.data().count)))]);
   const items = gs.map((g, k) => ({ groupId: g.id, groupName: g.data().name ?? g.id, color: g.data().color ?? '#64748b', groupStatus: g.data().status ?? 'active', priority: prios[k].exists ? (prios[k].data()!.priority as number) : 0, priceCount: counts[k] }));
   items.sort((a, b) => b.priority - a.priority || a.groupName.localeCompare(b.groupName, 'vi'));
@@ -172,9 +174,9 @@ export async function getItemPrices(c: Ctx, itemId: string): Promise<ItemPricesD
   needView(c);
   const it = (await col('catalogItems').doc(itemId).get()).data(); if (!it || it.organizationId !== c.orgId || it.deletedAt) throw notFound();
   const today = todayVn(), lists = (await col('priceLists').where('organizationId', '==', c.orgId).limit(500).get()).docs.filter(s => !s.data().deletedAt);
-  const [rows, gps] = await Promise.all([db().getAll(...lists.map(l => col('priceLists').doc(l.id).collection('items').doc(itemId))), col('groupPrices').where('organizationId', '==', c.orgId).where('itemId', '==', itemId).limit(200).get()]);
+  const [rows, gps] = await Promise.all([getAllSafe(lists.map(l => col('priceLists').doc(l.id).collection('items').doc(itemId))), col('groupPrices').where('organizationId', '==', c.orgId).where('itemId', '==', itemId).limit(200).get()]);
   const gIds = [...new Set([...gps.docs.map(s => s.data().groupId as string), ...lists.flatMap(l => (l.data().customerGroupIds ?? []) as string[])])];
-  const [gNames, prioDocs] = await Promise.all([namesOf(c.orgId, 'customerGroups', gIds), db().getAll(...gIds.map(g => col('groupPriorities').doc(prioId(c.orgId, g))))]);
+  const [gNames, prioDocs] = await Promise.all([namesOf(c.orgId, 'customerGroups', gIds), getAllSafe(gIds.map(g => col('groupPriorities').doc(prioId(c.orgId, g))))]);
   const prio = new Map(gIds.map((g, k) => [g, prioDocs[k].exists ? (prioDocs[k].data()!.priority as number) : 0]));
   return {
     itemId, code: it.code, name: it.name, defaultPrice: it.defaultPrice,

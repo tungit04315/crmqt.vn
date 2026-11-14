@@ -9,6 +9,7 @@ import type { OpportunityDetail } from '@/types/opportunity';
 import { Field, Section } from '@/components/ui/Info';
 import { StatusBadge } from '@/components/opportunities/ui';
 import HistoryTimeline from '@/components/opportunities/HistoryTimeline';
+import LinkedQuotations from '@/components/quotations/LinkedQuotations';
 import { AssignDialog, CloseDialog } from '@/components/opportunities/Dialogs';
 
 export default function OpportunityDetailPage() {
@@ -38,6 +39,7 @@ export default function OpportunityDetailPage() {
         <Field icon={User} label="Người phụ trách" value={o.ownerName} /><Field icon={Layers} label="Giai đoạn" value={o.stageName} />
         {o.status === 'lost' && <div className="sm:col-span-2"><Field icon={Target} label="Lý do thất bại" value={o.lostReason} /></div>}</div></Section>
       <Section title="Mô tả"><p className={`whitespace-pre-wrap rounded-xl bg-slate-50/70 p-4 text-sm ${o.description ? 'text-slate-800' : 'text-slate-400'}`}>{o.description || 'Chưa có mô tả.'}</p></Section>
+      <Section title="Báo giá"><LinkedQuotations opportunityId={id} /></Section>
       <Section title="Lịch sử thay đổi"><HistoryTimeline items={d.history} /></Section></div>
       <div className="space-y-4"><Section title="Thao tác"><div className="space-y-2">
         {can.close && <><button onClick={() => setDlg('won')} className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}>Chốt thành công</button>
