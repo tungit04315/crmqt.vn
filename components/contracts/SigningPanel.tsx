@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { api } from '@/lib/api';
+import { api, download, viewPdf } from '@/lib/api';
 import type { SigningStatusDto } from '@/lib/contract-sign-core';
 import { btn, errMsg } from './ui';
 
@@ -10,7 +10,7 @@ const TPL: Record<string, string> = { invite: 'Mời ký', otp: 'Mã OTP', signe
 const when = (s: string | null) => (s ? new Date(s).toLocaleString('vi-VN') : '');
 
 /** Gửi hợp đồng cho khách ký điện tử: gửi / gửi lại / thu hồi + trạng thái + nhật ký email. Chỉ hiện với hợp đồng tạo theo loại. */
-export default function SigningPanel({ id, onChanged }: { id: string; onChanged?: () => void }) {
+export default function SigningPanel({ id, fileBase = 'hop-dong', onChanged }: { id: string; fileBase?: string; onChanged?: () => void }) {
   const [s, setS] = useState<SigningStatusDto | null>(null); const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null); const [ok, setOk] = useState<string | null>(null); const [email, setEmail] = useState('');
   const load = useCallback(() => api<SigningStatusDto>(`/api/contracts/${id}/sign-request`).then(setS).catch(e => setErr(errMsg(e, 'Không tải được trạng thái ký.'))), [id]);
   useEffect(() => { load(); }, [load]);
@@ -25,6 +25,9 @@ export default function SigningPanel({ id, onChanged }: { id: string; onChanged?
     {s.can.send && <div className="flex flex-wrap items-end gap-2"><label className="text-xs text-slate-500">Email người ký (để trống = email Bên A)<input type="email" className="mt-1 h-9 w-64 rounded-md border border-slate-200 px-3 text-sm" value={email} onChange={e => setEmail(e.target.value)} /></label>
       <button disabled={busy} onClick={() => { if (resend && !window.confirm('Gửi lại sẽ vô hiệu hóa liên kết cũ. Tiếp tục?')) return; run(() => api(`/api/contracts/${id}/sign-request`, { method: 'POST', json: { email: email.trim() || undefined } }), 'Đã gửi email mời ký.'); }} className={`${btn} bg-blue-600 text-white`}>{busy ? 'Đang gửi…' : resend ? 'GỬI LẠI HỢP ĐỒNG' : 'GỬI HỢP ĐỒNG'}</button>
       {s.can.revoke && <button disabled={busy} onClick={() => { if (window.confirm('Thu hồi liên kết ký? Khách sẽ không ký được nữa.')) run(() => api(`/api/contracts/${id}/sign-request`, { method: 'DELETE' }), 'Đã thu hồi liên kết.'); }} className={`${btn} border border-red-200 text-red-600`}>Thu hồi liên kết</button>}</div>}
+    {s.status === 'signed' && <div className="flex flex-wrap items-center gap-2"><button disabled={busy} onClick={() => run(() => download(`/api/contracts/${id}/signed-pdf`, `${fileBase}_da-ky.pdf`), 'Đã tải hợp đồng đã ký.')} className={`${btn} bg-emerald-600 text-white`}>Tải hợp đồng đã ký (PDF)</button>
+      <button disabled={busy} onClick={() => run(() => viewPdf(`/api/contracts/${id}/signed-pdf`), 'Đã mở hợp đồng đã ký.')} className={`${btn} border border-slate-200 text-slate-700`}>Xem hợp đồng đã ký</button>
+      <span className="text-xs text-slate-500">Bản có chữ ký Bên A, Bên B và mã SHA-256. Khách cũng tải được bằng liên kết trong email “đã ký thành công”.</span></div>}
     {s.can.reopen && <button disabled={busy} onClick={() => { const r = window.prompt('Lý do mở phiên bản mới để sửa và ký lại (bản đã ký hiện tại được giữ nguyên):'); if (r?.trim()) run(() => api(`/api/contracts/${id}/reopen`, { method: 'POST', json: { reason: r.trim() } }), 'Đã mở phiên bản mới (dự thảo). Hãy chỉnh sửa, duyệt và gửi ký lại.'); }} className={`${btn} border border-amber-200 text-amber-700`}>Sửa & ký lại (phiên bản mới)</button>}
     {!s.can.send && s.status === 'none' && <p className="text-sm text-slate-500">Hợp đồng cần được duyệt (trạng thái “Chờ ký”) và bạn cần có quyền mới gửi ký được.</p>}
     {ok && <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{ok}</p>}{err && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{err}</p>}

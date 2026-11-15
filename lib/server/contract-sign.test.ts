@@ -176,6 +176,13 @@ describe('ký hợp đồng', () => {
     const i = await S.signingInfo(t, who); assert.deepEqual([i.state, i.canSign, i.canDownload, i.signedBy], ['signed', false, true, 'Nguyễn Văn An']);
     const dl = await S.signingPdf(t, who, { download: true }); assert.match(dl.fileName, /_da-ky\.pdf$/); assert.equal((await S.signingSignature(t)).mime, 'image/png');
   });
+  it('nhân viên tải được bản đã ký hiện hành (đúng tệp khách đã ký), có nhật ký; chưa ký / ngoài phạm vi thì không', async () => {
+    const { id, t } = await ready(); await fails(S.signedContractPdf(salesA, id), 404, 'not-signed');
+    await sign(t); const r = await S.signedContractPdf(salesA, id); assert.match(r.fileName, /_da-ky\.pdf$/);
+    const dl = await S.signingPdf(t, who); assert.deepEqual(Array.from(r.bytes), Array.from(dl.bytes)); assert.equal((await PDFDocument.load(r.bytes)).getPageCount(), 2);
+    await fails(S.signedContractPdf(salesB, id), 404);
+    assert.ok(fake.docsIn('contractEvents').some(p => fake.data.get(p)!.type === 'downloaded' && fake.data.get(p)!.actorUid === 'salesA'));
+  });
   it('không ký lại được: cùng liên kết, liên kết cũ, gửi lại, hai yêu cầu đồng thời chỉ một thành công', async () => {
     const a = await ready(); const [x, y] = await Promise.allSettled([sign(a.t), sign(a.t)]); assert.deepEqual([x.status, y.status].sort(), ['fulfilled', 'rejected']);
     assert.equal(fake.docsIn('contractSignatures').length, 1);

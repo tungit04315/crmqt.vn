@@ -71,7 +71,7 @@ export default function ContractDetailView() {
         {can.cancel && <button disabled={busy} onClick={() => open(withNote('cancel', 'Hủy hợp đồng', 'Hủy hợp đồng', true))} className={`${btn} border border-red-200 text-red-600 hover:bg-red-50`}>Hủy</button>}
         {can.remove && <button disabled={busy} onClick={() => { if (window.confirm(`Xóa hợp đồng ${c.code}?`)) { setBusy(true); api(`/api/contracts/${id}`, { method: 'DELETE' }).then(() => router.push('/contracts')).catch(e => { setErr(errMsg(e)); setBusy(false); }); } }} className={`${btn} text-red-600 hover:bg-red-50`}>Xóa</button>}</div></div>
     {err && <div role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-600">{err}</div>}
-    {d.doc && <SigningPanel key={`${c.status}-${c.version}`} id={id} onChanged={load} />}
+    {d.doc && <SigningPanel key={`${c.status}-${c.version}`} id={id} fileBase={(c.contractNumber || c.code).replace(/[^\w.-]+/g, '_')} onChanged={load} />}
     <div className="flex gap-1 overflow-x-auto border-b border-slate-200">{TABS.map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`whitespace-nowrap px-4 py-2 text-sm ${tab === k ? 'border-b-2 border-blue-600 font-semibold text-blue-700' : 'text-slate-500 hover:text-slate-800'}`}>{l}{tabCount[k] ? ` (${tabCount[k]})` : ''}</button>)}</div>
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       {tab === 'overview' && <div className="space-y-4"><dl className="grid gap-3 text-sm md:grid-cols-2">{info.map(([k, v]) => <div key={k}><dt className="text-xs text-slate-500">{k}</dt><dd className="font-medium text-slate-900">{v}</dd></div>)}</dl>

@@ -178,6 +178,15 @@ export async function signingPdf(token: string, who: PubCtx, opts: { download?: 
   return { bytes: f.bytes, fileName: `${(d.contractNumber ?? d.code).replace(/[^\w.-]+/g, '_')}${wantSigned ? '_da-ky' : ''}.pdf` };
 }
 
+/** Nhân viên (trong phạm vi xem hợp đồng) tải bản ĐÃ KÝ hiện hành — để xem lại hoặc gửi lại cho khách. */
+export async function signedContractPdf(c: Ctx, id: string) {
+  const d = (await loadContract(c, id)) as Row;
+  if (!d.docKind || d.signing?.status !== 'signed' || !d.signing.signedFileId) throw new HttpError(404, 'not-signed', 'Hợp đồng chưa có bản đã ký.');
+  const f = await loadFile(d.signing.signedFileId); if (!f) throw new HttpError(404, 'file-missing', 'Không tìm thấy tệp hợp đồng đã ký.');
+  await logEvent(id, c.orgId, 'downloaded', { uid: c.uid }, 'Nhân viên tải bản đã ký');
+  return { bytes: f.bytes, fileName: `${(d.contractNumber ?? d.code).replace(/[^\w.-]+/g, '_')}_da-ky.pdf` };
+}
+
 const otpHash = (th: string, code: string) => sha256(`otp:${th}:${code}`);
 export async function requestOtp(token: string, who: PubCtx) {
   const { th, t, d, state } = await resolve(token), cfg = signConfig(); if (state !== 'ready') throw new HttpError(409, state, LINK_MESSAGE[state as Exclude<typeof state, 'ready'>]);

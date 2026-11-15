@@ -23,3 +23,9 @@ export async function download(path: string, filename: string) {
   const blob = await (await call(path)).blob(), a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+/** Mở PDF (cần Bearer token) trong tab mới. Mở tab ngay khi bấm để trình duyệt không chặn cửa sổ bật lên. */
+export async function viewPdf(path: string) {
+  const w = window.open('', '_blank');
+  try { const blob = await (await call(path)).blob(); const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' })); if (w) w.location.href = url; else window.location.href = url; setTimeout(() => URL.revokeObjectURL(url), 60_000); }
+  catch (e) { w?.close(); throw e; }
+}
